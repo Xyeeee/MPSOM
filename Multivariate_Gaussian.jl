@@ -7,28 +7,27 @@ mass = 1.0
 ω₀ = 1.0
 g₁ = 1.0
 g₂ = 1e-3
-m=1.
-n=1.
-t=1.
+
 
 
 Ω(n) = sqrt(Ω₀^2 + 2 * g₂*n/mass)
 g(n) = n * g₁/sqrt(2 * mass * Ω(n))
 ω(n) = ω₀ * n + Ω(n)/2
 
+
 ψ(n,t) = ω(n) * t - g(n)^2/Ω(n)^2 * (Ω(n) * t - sin(Ω(n) * t))
 β(n,t) = g(n) / Ω(n) * (exp(-im * Ω(n) * t) - 1)
 
 
-μ(n) = 1/2 * sqrt(Ω₀/Ω(n)) * (1 + Ω₀/Ω(n))
-ν(n) = 1/2 * sqrt(Ω₀/Ω(n)) * (1 - Ω₀/Ω(n))
+μ(n) = 1/2 * sqrt(Ω(n)/Ω₀) * (1 + Ω₀/Ω(n))
+ν(n) = 1/2 * sqrt(Ω(n)/Ω₀) * (1 - Ω₀/Ω(n))
 
 # Integral matrix definitions
 # 1. η real 2. η imag 3. γ real 4. γ imag 5. ϵ real 6. ϵ imag 7. δ real 8. δ imag
 function get_A(n,m,t)
 
     A = zeros(Complex{Float64}, 8, 8)
-    A[1,1] = 2 + 1/σ^2 + ν(n)/μ(n) + ν(m)/μ(m)
+    A[1,1] = 2 + 1/(σ^2) + ν(n)/μ(n) + ν(m)/μ(m)
     A[1,2] = im * (ν(n)/μ(n) - ν(m)/μ(m))
     A[2,1] = im * (ν(n)/μ(n) - ν(m)/μ(m))
     A[1,3] = -1/μ(n)
@@ -44,7 +43,7 @@ function get_A(n,m,t)
     A[1,8] = -im/μ(m)
     A[8,1] = -im/μ(m)
 
-    A[2,2] = 2 + 1/σ^2 - ν(n)/μ(n) - ν(m)/μ(m)
+    A[2,2] = 2 + 1/(σ^2) - ν(n)/μ(n) - ν(m)/μ(m)
     A[2,3] = -im/μ(n)
     A[3,2] = -im/μ(n)
     A[2,4] = -1/μ(n)
@@ -59,12 +58,12 @@ function get_A(n,m,t)
     A[8,2] = -1/μ(m)
 
     A[3,3] = 2 - ν(n)/μ(n) * (1 + exp(-2 * im * Ω(n) * t))
-    A[3,4] = -ν(n)/μ(n) * im * exp(-2 * im * Ω(n) * t)
-    A[4,3] = -ν(n)/μ(n) * im * exp(-2 * im * Ω(n) * t)
+    A[3,4] = ν(n)/μ(n) * im * (1 - exp(-2 * im * Ω(n) * t))
+    A[4,3] = ν(n)/μ(n) * im * (1 - exp(-2 * im * Ω(n) * t))
     A[3,5] = -1/μ(n) * exp(-im * Ω(n) * t)
     A[5,3] = -1/μ(n) * exp(-im * Ω(n) * t)
-    A[3,6] = -im/μ(n) * exp(-im * Ω(n) * t)
-    A[6,3] = -im/μ(n) * exp(-im * Ω(n) * t)
+    A[3,6] = im/μ(n) * exp(-im * Ω(n) * t)
+    A[6,3] = im/μ(n) * exp(-im * Ω(n) * t)
     A[3,7] = 0
     A[7,3] = 0
     A[3,8] = 0
@@ -95,8 +94,8 @@ function get_A(n,m,t)
     A[8,6] = -1/μ(m) * exp(im * Ω(m) * t)
 
     A[7,7] = 2 - ν(m)/μ(m) * (1 + exp(2 * im * Ω(m) * t))
-    A[7,8] = ν(m)/μ(m) * im * exp(2 * im * Ω(m) * t)
-    A[8,7] = ν(m)/μ(m) * im * exp(2 * im * Ω(m) * t)
+    A[7,8] = ν(m)/μ(m) * im * (exp(2 * im * Ω(m) * t)-1)
+    A[8,7] = ν(m)/μ(m) * im * (exp(2 * im * Ω(m) * t)-1)
 
     A[8,8] = 2 + ν(m)/μ(m) * (1 + exp(2 * im * Ω(m) * t))
     return A
@@ -116,8 +115,8 @@ function get_B(n,m,t)
     return -1/2 * B
 end
 
-C(n,m,t) = -1/2 * abs(β(n,t))^2 * (1 - ν(n)/μ(n)) -1/2 * abs(β(m,t))^2 * (1 - ν(m)/μ(m))
+C(n,m,t) = -1/2 * (abs(β(n,t))^2 + abs(β(m,t))^2 - ν(m)/μ(m) * conj(β(m,t)^2) - ν(n)/μ(n) * β(m,t)^2)
 
-int_total(n,m,t) = exp(-im * (ψ(n,t)-ψ(m,t)))/(μ(n) * μ(m)) * sqrt((2*π)^8/det(get_A(n,m,t))) * exp(C(n,m,t)) * exp(1/2 * get_B(n,m,t)' * get_A(n,m,t)^-1 * get_B(n,m,t))
+int_total(n,m,t) = 1/(π^4*sqrt(2 * π * σ^2))*exp(-im * (ψ(n,t)-ψ(m,t)))/(μ(n) * μ(m)) * sqrt((2*π)^8/det(get_A(n,m,t))) * exp(C(n,m,t)) * exp(1/2 * get_B(n,m,t)' * get_A(n,m,t)^-1 * get_B(n,m,t))
 
-int_total(1,1,1)
+int_total(2,3,1)

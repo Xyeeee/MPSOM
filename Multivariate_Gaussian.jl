@@ -116,7 +116,7 @@ function get_B(n,m,t)
     return -1/2 * B
 end
 
-C(n,m,t) = -1/2 * (abs(β(n,t))^2 + abs(β(m,t))^2 - ν(m)/μ(m) * conj(β(m,t)^2) - ν(n)/μ(n) * β(m,t)^2)
+C(n,m,t) = -1/2 * (abs(β(n,t))^2 + abs(β(m,t))^2 - ν(m)/μ(m) * conj(β(m,t)^2) - ν(n)/μ(n) * β(n,t)^2) 
 
 int_total(n,m,t) = 1/(π^3 * π * N_th)*exp(-im * (ψ(n,t)-ψ(m,t)))/(μ(n) * μ(m)) * sqrt((2*π)^8/det(get_A(n,m,t))) * exp(C(n,m,t)) * exp(1/2 * get_B(n,m,t)' * get_A(n,m,t)^-1 * get_B(n,m,t))
 

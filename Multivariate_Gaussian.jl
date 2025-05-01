@@ -231,34 +231,27 @@ dev_C(n,m,g₂,t) = -(
     real(dev_β(m,g₂,t)) * real(β(m,g₂,t)) + 
     imag(dev_β(m,g₂,t)) * imag(β(m,g₂,t))
 ) + 1/2 * (
-    (dev_ν(m,g₂)/μ(m,g₂) - ν(m,g₂)/μ(m,g₂)^2 * dev_μ(m,g₂-(dev_μ(n,g₂)/μ(n,g₂) + dev_μ(m,g₂)/μ(m,g₂)) * I)) * conj(β(m,g₂,t)^2) + 
-    ν(m,g₂)/μ(m,g₂) * 2* conj(β(m,g₂,t))* conj(dev_β(m,g₂,t)) + 
+    (dev_ν(m,g₂)/μ(m,g₂) - ν(m,g₂)/μ(m,g₂)^2 * dev_μ(m,g₂)) * conj(β(m,g₂,t)^2) + 
+    ν(m,g₂)/μ(m,g₂) * 2 * conj(β(m,g₂,t)) * conj(dev_β(m,g₂,t)) + 
     (dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂)) * β(n,g₂,t)^2 +
-    ν(n,g₂)/μ(n,g₂) * (2 * dev_β(n,g₂,t)*β(n,g₂,t))
+    ν(n,g₂)/μ(n,g₂) * (2 * dev_β(n,g₂,t) * β(n,g₂,t))
 )
 
 function dev_int_total(n,m,g₂,t)
     I = int_total(n,m,g₂,t)
-    println("I = ", I)
     to_return = -im * (dev_ψ(n,g₂,t)-dev_ψ(m,g₂,t))
-    println("c0 (phase)    =", -im * (dev_ψ(n,g₂,t)-dev_ψ(m,g₂,t)))
-    println("Contribution from dev_ψ: ", to_return)
     cont_1 = -(dev_μ(n,g₂)/μ(n,g₂) + dev_μ(m,g₂)/μ(m,g₂))
     to_return += cont_1
-    println("Contribution from dev_μ: ", cont_1)
     cont_2 =  -1/2 * tr(get_A(n,m,g₂,t)^(-1)*get_dev_A(n,m,g₂,t))
     to_return += cont_2
-    println("Contribution from dev_A: ", cont_2)
     cont_3 = dev_C(n,m,g₂,t)
     to_return += cont_3
-    println("Contribution from dev_C: ", cont_3)
     cont_4 = 1/2*(
         transpose(get_B(n,m,g₂,t)) * get_A(n,m,g₂,t)^(-1) * get_dev_B(n,m,g₂,t) + 
         transpose(get_dev_B(n,m,g₂,t)) * get_A(n,m,g₂,t)^(-1) * get_B(n,m,g₂,t) - 
         transpose(get_B(n,m,g₂,t)) * (get_A(n,m,g₂,t)^(-1) * get_dev_A(n,m,g₂,t) * get_A(n,m,g₂,t)^(-1)) * get_B(n,m,g₂,t)
     )
     to_return += cont_4
-    println("Contribution from dev_B: ", cont_4) 
     return to_return * I
 end
 
@@ -267,7 +260,7 @@ function plot_evolution()
     t_track = 0.0:0.01:10.0
     g_track = 1e-5:1e-5:1e-3
     diag_g = [int_total(3,3,g,1.) for g in g_track]
-    diag_dev = [dev_int_total(3,3,g,1.) for g in g_track]
+    diag_dev = [dev_int_total(10,10,g,10.) for g in g_track]
     dev_track = [dev_int_total(3,3,1e-2,t) for t in t_track]
     ev_11 = [int_total(1,1,g₂,t) for t in t_track]
     ev_22 = [int_total(10,10,g₂,t) for t in t_track]
@@ -292,4 +285,26 @@ function plot_evolution()
 end
 # plot_evolution()
 
+function get_mat(a, b, g₂, t)
+    # This function constructs the time dependent density matrix, a is a_00 and b is a_01
+    ρ= zeros(Complex{Float64}, 2, 2)
+    ρ[1,1] = a * int_total(0,0,g₂,t)
+    ρ[2,2] = (1-a) * int_total(1,1,g₂,t)
+    ρ[1,2] = b * int_total(0,1,g₂,t)
+    ρ[2,1] = conj(b) * int_total(1,0,g₂,t)
+    return ρ
+end
+
+function get_dev_mat(a, b, g₂, t)
+    # This function constructs the time dependent density matrix, a is a_00 and b is a_01
+    dev_ρ= zeros(Complex{Float64}, 2, 2)
+    dev_ρ[1,1] = a * dev_int_total(0,0,g₂,t)
+    dev_ρ[2,2] = (1-a) * dev_int_total(1,1,g₂,t)
+    dev_ρ[1,2] = b * dev_int_total(0,1,g₂,t)
+    dev_ρ[2,1] = conj(b) * dev_int_total(1,0,g₂,t)
+    return dev_ρ
+end  
+
+diff = sum(abs.(get_dev_mat(0., 0.1, 1e-2, 10) * get_mat(0.,0.1, 1e-2, 10) .- get_mat(0.,0.1, 1e-2, 10) * get_dev_mat(0., 0.1, 1e-2, 10)))
+println(diff)
 

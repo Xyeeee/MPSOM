@@ -305,6 +305,7 @@ function get_dev_mat(a, b, g₂, t)
     return dev_ρ
 end  
 
-diff = sum(abs.(get_dev_mat(0., 0.1, 1e-2, 10) * get_mat(0.,0.1, 1e-2, 10) .- get_mat(0.,0.1, 1e-2, 10) * get_dev_mat(0., 0.1, 1e-2, 10)))
+comm(a,b,g₂, t) = -get_dev_mat(a, b, g₂, t) * get_mat(a,b,g₂, t) .+ get_mat(a,b,g₂, t) * get_dev_mat(a,b,g₂, t)
+comm(0.5,0.5,1e-2,1.) ./ get_dev_mat(0.5,0.5,1e-2,1.)
 println(diff)
 

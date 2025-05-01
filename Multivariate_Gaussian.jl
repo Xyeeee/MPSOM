@@ -1,5 +1,6 @@
 using LinearAlgebra
 using Plots
+using ForwardDiff
 
 
 # Parameters involved in the model
@@ -11,8 +12,6 @@ mass = 1.0
 g₁ = 1.0
 g₂ = 1e-2
 N_th = 1.0
-
-
 
 Ω(n,g₂) = sqrt(Ω₀^2 + 2 * g₂*n/mass)
 dev_Ω(n,g₂) = 1/2 * 2 * n/(mass *Ω(n,g₂))
@@ -32,7 +31,6 @@ dev_ν(n,g₂) = 1/2 * (ν(n,g₂)/Ω(n,g₂)* dev_Ω(n,g₂) + sqrt(Ω(n,g₂)/
 # Integral matrix definitions
 # 1. η real 2. η imag 3. γ real 4. γ imag 5. ϵ real 6. ϵ imag 7. δ real 8. δ imag
 function get_A(n,m,g₂,t)
-
     A = zeros(Complex{Float64}, 8, 8)
     A[1,1] = 2 + 2/(N_th) + ν(n,g₂)/μ(n,g₂) + ν(m,g₂)/μ(m,g₂)
     A[1,2] = im * (ν(n,g₂)/μ(n,g₂) - ν(m,g₂)/μ(m,g₂))
@@ -129,7 +127,7 @@ end
 C(n,m,g₂,t) = -1/2 * (abs(β(n,g₂,t))^2 + abs(β(m,g₂,t))^2 - ν(m,g₂)/μ(m,g₂) * conj(β(m,g₂,t)^2) - ν(n,g₂)/μ(n,g₂) * β(n,g₂,t)^2) 
 
 
-int_total(n,m,g₂,t) = 1/(π^3 * π * N_th)*exp(-im * (ψ(n,g₂,t)-ψ(m,g₂,t)))/(μ(n,g₂) * μ(m,g₂)) * sqrt((2*π)^8/det(get_A(n,m,g₂,t))) * exp(C(n,m,g₂,t)) * exp(1/2* get_B(n,m,g₂,t)' * get_A(n,m,g₂,t)^-1 * get_B(n,m,g₂,t))
+int_total(n,m,g₂,t) = 1/(π^3 * π * N_th)*exp(-im * (ψ(n,g₂,t)-ψ(m,g₂,t)))/(μ(n,g₂) * μ(m,g₂)) * sqrt((2*π)^8/det(get_A(n,m,g₂,t))) * exp(C(n,m,g₂,t)) * exp(1/2* transpose(get_B(n,m,g₂,t)) * get_A(n,m,g₂,t)^-1 * get_B(n,m,g₂,t))
 
 function get_dev_A(n,m,g₂,t)
     dev_A = zeros(Complex{Float64}, 8, 8)
@@ -175,7 +173,7 @@ function get_dev_A(n,m,g₂,t)
     dev_A[3,8] = 0
     dev_A[8,3] = 0
 
-    dev_A[4,4] = (dev_ν(n,g₂)/μ(n,g₂)- ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂)) * (1 + exp(-2 * im * Ω(n,g₂) * t)) - 2 * ν(n,g₂)/μ(n,g₂) * dev_Ω(n,g₂) * t* im * exp(-2 * im * Ω(n,g₂) * t)
+    dev_A[4,4] = (dev_ν(n,g₂)/μ(n,g₂)- ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂)) * (1 + exp(-2 * im * Ω(n,g₂) * t)) - 2 * ν(n,g₂)/μ(n,g₂) * dev_Ω(n,g₂) * t * im * exp(-2 * im * Ω(n,g₂) * t)
     dev_A[4,5] = im/μ(n,g₂)^2 * dev_μ(n,g₂) * exp(-im * Ω(n,g₂) * t) - 1/μ(n,g₂) * dev_Ω(n,g₂) * t* exp(-im * Ω(n,g₂) * t)
     dev_A[5,4] = im/μ(n,g₂)^2 * dev_μ(n,g₂) * exp(-im * Ω(n,g₂) * t) - 1/μ(n,g₂) * dev_Ω(n,g₂) * t* exp(-im * Ω(n,g₂) * t)
     dev_A[4,6] = 1/μ(n,g₂)^2 * dev_μ(n,g₂) * exp(-im * Ω(n,g₂) * t) + im/μ(n,g₂) * dev_Ω(n,g₂) * t* exp(-im * Ω(n,g₂) * t)
@@ -223,36 +221,54 @@ function get_dev_B(n,m,g₂,t)
                 + (dev_β(m,g₂,t) + β(m,g₂,t) * im* t* dev_Ω(m,g₂))* exp(im* Ω(m,g₂)* t)
     dev_B[8] = 2 * (real(dev_β(m,g₂,t)) * sin(Ω(m,g₂) * t) + real(β(m,g₂,t)) * cos(Ω(m,g₂) * t) * dev_Ω(m,g₂) * t  + imag(dev_β(m,g₂,t)) * cos(Ω(m,g₂) * t) - imag(β(m,g₂,t)) * sin(Ω(m,g₂) * t) * t * dev_Ω(m,g₂) + im * (conj(dev_β(m,g₂,t)) *  ν(m,g₂)/μ(m,g₂) + conj(β(m,g₂,t)) *  (dev_ν(m,g₂)/μ(m,g₂) - ν(m,g₂)/μ(m,g₂)^2 * dev_μ(m,g₂)) + conj(β(m,g₂,t)) * ν(m,g₂)/μ(m,g₂) * im * dev_Ω(m,g₂) * t) *  exp(im * Ω(m,g₂) * t))
                 - (im* conj(dev_β(m,g₂,t)) + conj(β(m,g₂,t)) * t* dev_Ω(m,g₂))* exp(-im* Ω(m,g₂)* t)
-                +(-im* dev_β(m,g₂,t) + β(m,g₂,t) * t* dev_Ω(m,g₂))* exp(im* Ω(n,g₂)* t)
+                +(-im* dev_β(m,g₂,t) + β(m,g₂,t) * t* dev_Ω(m,g₂))* exp(im* Ω(m,g₂)* t)
     return -1/2 * dev_B
 end
 
-dev_C(n,m,g₂,t) = -(real(dev_β(n,g₂,t))*real(β(n,g₂,t)) + imag(dev_β(n,g₂,t)) * imag(β(n,g₂,t)) + real(dev_β(m,g₂,t))*real(β(m,g₂,t)) + imag(dev_β(m,g₂,t)) * imag(β(m,g₂,t))) +1/2* ((dev_ν(m,g₂)/μ(m,g₂) - ν(m,g₂)/μ(m,g₂)^2 * dev_μ(m,g₂)) * conj(β(m,g₂,t)^2) + ν(m,g₂)/μ(m,g₂) * 2* conj(β(m,g₂,t))* conj(dev_β(m,g₂,t)) + (dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂)) * β(n,g₂,t)^2 + ν(n,g₂)/μ(n,g₂) * (2 * dev_β(n,g₂,t)*β(n,g₂,t)))
+dev_C(n,m,g₂,t) = -(
+    real(dev_β(n,g₂,t)) * real(β(n,g₂,t)) + 
+    imag(dev_β(n,g₂,t)) * imag(β(n,g₂,t)) + 
+    real(dev_β(m,g₂,t)) * real(β(m,g₂,t)) + 
+    imag(dev_β(m,g₂,t)) * imag(β(m,g₂,t))
+) + 1/2 * (
+    (dev_ν(m,g₂)/μ(m,g₂) - ν(m,g₂)/μ(m,g₂)^2 * dev_μ(m,g₂-(dev_μ(n,g₂)/μ(n,g₂) + dev_μ(m,g₂)/μ(m,g₂)) * I)) * conj(β(m,g₂,t)^2) + 
+    ν(m,g₂)/μ(m,g₂) * 2* conj(β(m,g₂,t))* conj(dev_β(m,g₂,t)) + 
+    (dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂)) * β(n,g₂,t)^2 +
+    ν(n,g₂)/μ(n,g₂) * (2 * dev_β(n,g₂,t)*β(n,g₂,t))
+)
 
 function dev_int_total(n,m,g₂,t)
     I = int_total(n,m,g₂,t)
-    to_return = -im * (dev_ψ(n,g₂,t)-dev_ψ(m,g₂,t)) * I
+    println("I = ", I)
+    to_return = -im * (dev_ψ(n,g₂,t)-dev_ψ(m,g₂,t))
+    println("c0 (phase)    =", -im * (dev_ψ(n,g₂,t)-dev_ψ(m,g₂,t)))
     println("Contribution from dev_ψ: ", to_return)
-    cont_1 = -(dev_μ(n,g₂)/μ(n,g₂) + dev_μ(m,g₂)/μ(m,g₂)) * I
+    cont_1 = -(dev_μ(n,g₂)/μ(n,g₂) + dev_μ(m,g₂)/μ(m,g₂))
     to_return += cont_1
     println("Contribution from dev_μ: ", cont_1)
-    cont_2 =  -1/2 * tr(get_A(n,m,g₂,t)^(-1)*get_dev_A(n,m,g₂,t)) * I
+    cont_2 =  -1/2 * tr(get_A(n,m,g₂,t)^(-1)*get_dev_A(n,m,g₂,t))
     to_return += cont_2
     println("Contribution from dev_A: ", cont_2)
-    cont_3 = dev_C(n,m,g₂,t) * I
+    cont_3 = dev_C(n,m,g₂,t)
     to_return += cont_3
     println("Contribution from dev_C: ", cont_3)
-    cont_4 = 1/2*(get_B(n,m,g₂,t)' * get_A(n,m,g₂,t)^(-1) * get_dev_B(n,m,g₂,t) + get_dev_B(n,m,g₂,t)' * get_A(n,m,g₂,t)^(-1) * get_B(n,m,g₂,t) - get_B(n,m,g₂,t)' * get_A(n,m,g₂,t)^(-1) * get_dev_A(n,m,g₂,t)*get_A(n,m,g₂,t)^(-1) * get_B(n,m,g₂,t)) * I
+    cont_4 = 1/2*(
+        transpose(get_B(n,m,g₂,t)) * get_A(n,m,g₂,t)^(-1) * get_dev_B(n,m,g₂,t) + 
+        transpose(get_dev_B(n,m,g₂,t)) * get_A(n,m,g₂,t)^(-1) * get_B(n,m,g₂,t) - 
+        transpose(get_B(n,m,g₂,t)) * (get_A(n,m,g₂,t)^(-1) * get_dev_A(n,m,g₂,t) * get_A(n,m,g₂,t)^(-1)) * get_B(n,m,g₂,t)
+    )
     to_return += cont_4
     println("Contribution from dev_B: ", cont_4) 
-    return to_return
+    return to_return * I
 end
 
 
 function plot_evolution()
     t_track = 0.0:0.01:10.0
     g_track = 1e-5:1e-5:1e-3
-    diag_g = [int_total(3,3,g,0.) for g in g_track]
+    diag_g = [int_total(3,3,g,1.) for g in g_track]
+    diag_dev = [dev_int_total(3,3,g,1.) for g in g_track]
+    dev_track = [dev_int_total(3,3,1e-2,t) for t in t_track]
     ev_11 = [int_total(1,1,g₂,t) for t in t_track]
     ev_22 = [int_total(10,10,g₂,t) for t in t_track]
     ev_33 = [int_total(100,100,g₂,t) for t in t_track]
@@ -265,11 +281,15 @@ function plot_evolution()
     xlabel!("g")
     ylabel!("Matrix element value")
     plot!(g_track, round.(real.(diag_g),digits=10))
+    plot!(g_track, round.(real.(diag_dev),digits=10))
     #--- Uncomment the following lines to plot the evolution of the integral value over time
     # title!("Integral evolution, g=1e-10")
     # xlabel!("Time")
     # ylabel!("Integral value")	
+    # plot!(t_track, real.(dev_track), label="dev", xlabel="Time", ylabel="Real part of the integral")
     # plot!(t_track, round.([real.(ev_11) real.(ev_22) real.(ev_33)],digits=10), label=["1" "10" "100"], xlabel="Time", ylabel="Real part of the integral")
     display(plt)
 end
 # plot_evolution()
+
+

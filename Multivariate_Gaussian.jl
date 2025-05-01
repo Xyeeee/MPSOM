@@ -17,18 +17,18 @@ N_th = 1.0
 Ω(n,g₂) = sqrt(Ω₀^2 + 2 * g₂*n/mass)
 dev_Ω(n,g₂) = 1/2 * 2 * n/(mass *Ω(n,g₂))
 g(n,g₂) = n * g₁/sqrt(2 * mass * Ω(n,g₂))
-dev_g(n,g₂) = n * g₁/sqrt(2 * mass) * Ω(n,g₂)^(-3/2) * dev_Ω(n,g₂)
+dev_g(n,g₂) = -1/2 * g(n,g₂)/Ω(n,g₂) * dev_Ω(n,g₂)
 ω(n,g₂) = ω₀ * n + Ω(n,g₂)/2
 dev_ω(n,g₂) = 1/2 * dev_Ω(n,g₂)
 
 ψ(n,g₂,t) = ω(n,g₂) * t - g(n,g₂)^2/Ω(n,g₂)^2 * (Ω(n,g₂) * t - sin(Ω(n,g₂) * t))
 dev_ψ(n,g₂,t) = dev_ω(n,g₂) * t - 2 * (dev_g(n,g₂) * g(n,g₂)/Ω(n,g₂)^2 - g(n,g₂)^2/Ω(n,g₂)^3 * dev_Ω(n,g₂))* (Ω(n,g₂) * t - sin(Ω(n,g₂) * t)) - g(n,g₂)^2/Ω(n,g₂)^2 * (dev_Ω(n,g₂) * t - t * dev_Ω(n,g₂) * cos(Ω(n,g₂) * t))
 β(n,g₂,t) = g(n,g₂) / Ω(n,g₂) * (exp(-im * Ω(n,g₂) * t) - 1)
-dev_β(n,g₂,t) = (dev_g(n,g₂)/Ω(n,g₂) -g(n,g₂)/Ω(n,g₂)^2 * dev_Ω(n,g₂))  * (-im * Ω(n,g₂) * exp(-im * Ω(n,g₂) * t)) -im * t * dev_Ω(n,g₂)* g(n,g₂) / Ω(n,g₂) * exp(-im * Ω(n,g₂) * t) 
+dev_β(n,g₂,t) = (dev_g(n,g₂)/Ω(n,g₂) -g(n,g₂)/Ω(n,g₂)^2 * dev_Ω(n,g₂))  * (exp(-im * Ω(n,g₂) * t) - 1) -im * t * dev_Ω(n,g₂)* g(n,g₂) / Ω(n,g₂) * exp(-im * Ω(n,g₂) * t) 
 μ(n,g₂) = 1/2 * sqrt(Ω(n,g₂)/Ω₀) * (1 + Ω₀/Ω(n,g₂))
-dev_μ(n,g₂) = 1/2 * 1/2 * sqrt(1/(Ω₀* Ω(n,g₂))) * dev_Ω(n,g₂) * (1 + Ω₀/Ω(n,g₂)) - 1/2 * sqrt(Ω(n,g₂)/Ω₀) * Ω₀/Ω(n,g₂)^2 * dev_Ω(n,g₂)
+dev_μ(n,g₂) = 1/2 * (1/2 * μ(n,g₂)/Ω(n,g₂)* dev_Ω(n,g₂) - sqrt(Ω(n,g₂)/Ω₀) * Ω₀/Ω(n,g₂)^2 * dev_Ω(n,g₂))
 ν(n,g₂) = 1/2 * sqrt(Ω(n,g₂)/Ω₀) * (1 - Ω₀/Ω(n,g₂))
-dev_ν(n,g₂) = 1/2 * 1/2 * sqrt(1/(Ω₀* Ω(n,g₂))) * dev_Ω(n,g₂) * (1 - Ω₀/Ω(n,g₂)) + 1/2 * sqrt(Ω(n,g₂)/Ω₀) * Ω₀/Ω(n,g₂)^2 * dev_Ω(n,g₂)
+dev_ν(n,g₂) = 1/2 * (1/2 *ν(n,g₂)/Ω(n,g₂)* dev_Ω(n,g₂) + sqrt(Ω(n,g₂)/Ω₀) * Ω₀/Ω(n,g₂)^2 * dev_Ω(n,g₂))
 # Integral matrix definitions
 # 1. η real 2. η imag 3. γ real 4. γ imag 5. ϵ real 6. ϵ imag 7. δ real 8. δ imag
 function get_A(n,m,g₂,t)
@@ -164,8 +164,8 @@ function get_dev_A(n,m,g₂,t)
     dev_A[8,2] = 1/μ(m,g₂)^2 * dev_μ(m,g₂)
     
     dev_A[3,3] = (-dev_ν(n,g₂)/μ(n,g₂) + ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂)) * (1 + exp(-2 * im * Ω(n,g₂) * t)) + 2 * ν(n,g₂)/μ(n,g₂) * dev_Ω(n,g₂) * t* im * exp(-2 * im * Ω(n,g₂) * t)
-    dev_A[3,4] = im*(-dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂))* (1 - exp(-2 * im * Ω(n,g₂) * t)) - 2 * ν(n,g₂)/μ(n,g₂) * dev_Ω(n,g₂) * t* exp(-2 * im * Ω(n,g₂) * t)
-    dev_A[4,3] = im*(-dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂))* (1 - exp(-2 * im * Ω(n,g₂) * t)) - 2 * ν(n,g₂)/μ(n,g₂) * dev_Ω(n,g₂) * t* exp(-2 * im * Ω(n,g₂) * t)
+    dev_A[3,4] = im*(dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂))* (1 - exp(-2 * im * Ω(n,g₂) * t)) - 2 * ν(n,g₂)/μ(n,g₂) * dev_Ω(n,g₂) * t* exp(-2 * im * Ω(n,g₂) * t)
+    dev_A[4,3] = im*(dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂))* (1 - exp(-2 * im * Ω(n,g₂) * t)) - 2 * ν(n,g₂)/μ(n,g₂) * dev_Ω(n,g₂) * t* exp(-2 * im * Ω(n,g₂) * t)
     dev_A[3,5] = 1/μ(n,g₂)^2 * dev_μ(n,g₂) * exp(-im * Ω(n,g₂) * t) + 1/μ(n,g₂) * dev_Ω(n,g₂) * t* im * exp(-im * Ω(n,g₂) * t)
     dev_A[5,3] = 1/μ(n,g₂)^2 * dev_μ(n,g₂) * exp(-im * Ω(n,g₂) * t) + 1/μ(n,g₂) * dev_Ω(n,g₂) * t* im * exp(-im * Ω(n,g₂) * t)
     dev_A[3,6] = -im/μ(n,g₂)^2 * dev_μ(n,g₂) * exp(-im * Ω(n,g₂) * t) + 1/μ(n,g₂) * dev_Ω(n,g₂) * t* exp(-im * Ω(n,g₂) * t)
@@ -211,38 +211,48 @@ function get_dev_B(n,m,g₂,t)
     dev_B[1] = 0
     dev_B[2] = 0
     dev_B[3] = 2 * (real(dev_β(n,g₂,t)) * cos(Ω(n,g₂) * t) - real(β(n,g₂,t)) * sin(Ω(n,g₂) * t) * dev_Ω(n,g₂) * t  - imag(dev_β(n,g₂,t)) * sin(Ω(n,g₂) * t) - imag(β(n,g₂,t)) * cos(Ω(n,g₂) * t) * t * dev_Ω(n,g₂) - (dev_β(n,g₂,t) *  ν(n,g₂)/μ(n,g₂) + β(n,g₂,t) *  (dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂)) - β(n,g₂,t) * ν(n,g₂)/μ(n,g₂) * im * dev_Ω(n,g₂) * t) *  exp(-im * Ω(n,g₂) * t))
-                - dev_β(n,g₂,t) * exp(im * Ω(n,g₂) * t) -β(n,g₂,t) * im * t * dev_Ω(n,g₂) * exp(im * Ω(n,g₂) * t) 
-                + conj(dev_β(n,g₂,t)) * exp(-im * Ω(n,g₂) * t) - conj(β(n,g₂,t)) * im * t * dev_Ω(n,g₂) * exp(-im * Ω(n,g₂) * t)
+                - (dev_β(n,g₂,t) + β(n,g₂,t) * im * t * dev_Ω(n,g₂))* exp(im * Ω(n,g₂) * t) 
+                + (conj(dev_β(n,g₂,t)) - conj(β(n,g₂,t)) * im * t * dev_Ω(n,g₂)) * exp(-im * Ω(n,g₂) * t)
     dev_B[4] = 2 * (real(dev_β(n,g₂,t)) * sin(Ω(n,g₂) * t) + real(β(n,g₂,t)) * cos(Ω(n,g₂) * t) * dev_Ω(n,g₂) * t  + imag(dev_β(n,g₂,t)) * cos(Ω(n,g₂) * t) - imag(β(n,g₂,t)) * sin(Ω(n,g₂) * t) * t * dev_Ω(n,g₂) - im * (dev_β(n,g₂,t) *  ν(n,g₂)/μ(n,g₂) + β(n,g₂,t) *  (dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂)) - β(n,g₂,t) * ν(n,g₂)/μ(n,g₂) * im * dev_Ω(n,g₂) * t) *  exp(-im * Ω(n,g₂) * t))
-                + im * dev_β(n,g₂,t) * exp(im * Ω(n,g₂) * t) -β(n,g₂,t) * t * dev_Ω(n,g₂) * exp(im * Ω(n,g₂) * t) 
-                + im * conj(dev_β(n,g₂,t)) * exp(-im * Ω(n,g₂) * t) + conj(β(n,g₂,t)) * t * dev_Ω(n,g₂) * exp(-im * Ω(n,g₂) * t)
+                + (im * dev_β(n,g₂,t) - β(n,g₂,t) * t * dev_Ω(n,g₂))* exp(im * Ω(n,g₂) * t) 
+                + (im * conj(dev_β(n,g₂,t)) + conj(β(n,g₂,t)) * t * dev_Ω(n,g₂)) * exp(-im * Ω(n,g₂) * t)
     dev_B[5] = 2/μ(n,g₂)^2 * dev_μ(n,g₂) * β(n,g₂,t) -2/μ(n,g₂) *dev_β(n,g₂,t)  +2/μ(m,g₂)^2 * conj(β(m,g₂,t)) * dev_μ(m,g₂) -2/μ(m,g₂) * conj(dev_β(m,g₂,t))
     dev_B[6] = -2 * im/μ(n,g₂)^2 * dev_μ(n,g₂) * β(n,g₂,t) + 2* im/μ(n,g₂) *dev_β(n,g₂,t) + 2 * im/μ(m,g₂)^2 * conj(β(m,g₂,t)) * dev_μ(m,g₂) -2* im/μ(m,g₂) * conj(dev_β(m,g₂,t))
     dev_B[7] = 2 * (real(dev_β(m,g₂,t)) * cos(Ω(m,g₂) * t) - real(β(m,g₂,t)) * sin(Ω(m,g₂) * t) * dev_Ω(m,g₂) * t  - imag(dev_β(m,g₂,t)) * sin(Ω(m,g₂) * t) - imag(β(m,g₂,t)) * cos(Ω(m,g₂) * t) * t * dev_Ω(m,g₂) - (conj(dev_β(m,g₂,t)) *  ν(m,g₂)/μ(m,g₂) + conj(β(m,g₂,t)) *  (dev_ν(m,g₂)/μ(m,g₂) - ν(m,g₂)/μ(m,g₂)^2 * dev_μ(m,g₂)) + conj(β(m,g₂,t)) * ν(m,g₂)/μ(m,g₂) * im * dev_Ω(m,g₂) * t) *  exp(im * Ω(m,g₂) * t))
-                - conj(dev_β(m,g₂,t)) * exp(-im * Ω(m,g₂) * t) + conj(β(m,g₂,t)) * im* t* dev_Ω(m,g₂)* exp(-im* Ω(m,g₂)* t)
-                + dev_β(m,g₂,t) * exp(im* Ω(m,g₂)* t) + β(m,g₂,t) * im* t* dev_Ω(m,g₂)* exp(im* Ω(m,g₂)* t)
+                +(-conj(dev_β(m,g₂,t)) + conj(β(m,g₂,t)) * im* t* dev_Ω(m,g₂))* exp(-im* Ω(m,g₂)* t)
+                + (dev_β(m,g₂,t) + β(m,g₂,t) * im* t* dev_Ω(m,g₂))* exp(im* Ω(m,g₂)* t)
     dev_B[8] = 2 * (real(dev_β(m,g₂,t)) * sin(Ω(m,g₂) * t) + real(β(m,g₂,t)) * cos(Ω(m,g₂) * t) * dev_Ω(m,g₂) * t  + imag(dev_β(m,g₂,t)) * cos(Ω(m,g₂) * t) - imag(β(m,g₂,t)) * sin(Ω(m,g₂) * t) * t * dev_Ω(m,g₂) + im * (conj(dev_β(m,g₂,t)) *  ν(m,g₂)/μ(m,g₂) + conj(β(m,g₂,t)) *  (dev_ν(m,g₂)/μ(m,g₂) - ν(m,g₂)/μ(m,g₂)^2 * dev_μ(m,g₂)) + conj(β(m,g₂,t)) * ν(m,g₂)/μ(m,g₂) * im * dev_Ω(m,g₂) * t) *  exp(im * Ω(m,g₂) * t))
-                - im* conj(dev_β(m,g₂,t)) * exp(-im* Ω(m,g₂)* t) - conj(β(m,g₂,t)) * t* dev_Ω(m,g₂)* exp(-im* Ω(m,g₂)* t)
-                - im* dev_β(m,g₂,t) * exp(im* Ω(m,g₂)* t) + β(m,g₂,t) * t* dev_Ω(n,g₂)* exp(im* Ω(n,g₂)* t)
+                - (im* conj(dev_β(m,g₂,t)) + conj(β(m,g₂,t)) * t* dev_Ω(m,g₂))* exp(-im* Ω(m,g₂)* t)
+                +(-im* dev_β(m,g₂,t) + β(m,g₂,t) * t* dev_Ω(n,g₂))* exp(im* Ω(n,g₂)* t)
     return dev_B
 end
 
-dev_C(n,m,g₂,t) = -1/2 * ((real(dev_β(n,g₂,t)) + imag(dev_β(n,g₂,t)))/abs(β(n,g₂,t)) +(real(dev_β(m,g₂,t)) + imag(dev_β(m,g₂,t)))/abs(β(m,g₂,t)) - (dev_ν(m,g₂)/μ(m,g₂) - ν(m,g₂)/μ(m,g₂)^2 * dev_μ(m,g₂)) * conj(β(m,g₂,t)^2) - ν(m,g₂)/μ(m,g₂) * conj(2 * dev_β(m,g₂,t)) - (dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂)) * β(n,g₂,t)^2 - ν(n,g₂)/μ(n,g₂) * (2 * dev_β(n,g₂,t)))
+dev_C(n,m,g₂,t) = -(real(dev_β(n,g₂,t))*real(β(n,g₂,t)) + imag(dev_β(n,g₂,t)) * imag(β(n,g₂,t)) + real(dev_β(m,g₂,t))*real(β(m,g₂,t)) + imag(dev_β(m,g₂,t)) * imag(β(m,g₂,t))) +1/2* ((dev_ν(m,g₂)/μ(m,g₂) - ν(m,g₂)/μ(m,g₂)^2 * dev_μ(m,g₂)) * conj(β(m,g₂,t)^2) - ν(m,g₂)/μ(m,g₂) * 2* conj(β(m,g₂,t))* conj(dev_β(m,g₂,t)) + (dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂)) * β(n,g₂,t)^2 + ν(n,g₂)/μ(n,g₂) * (2 * dev_β(n,g₂,t)*β(n,g₂,t)))
 
 function dev_int_total(n,m,g₂,t)
     I = int_total(n,m,g₂,t)
     to_return = -im * (dev_ψ(n,g₂,t)-dev_ψ(m,g₂,t)) * I
-    to_return += -1/(μ(n,g₂) * μ(m,g₂)) * (dev_μ(n,g₂) * μ(m,g₂) + μ(n,g₂) * dev_μ(m,g₂)) * I
-    to_return += -1/2 * tr(get_A(n,m,g₂,t)^(-1)*get_dev_A(n,m,g₂,t)) * I
-    to_return += dev_C(n,m,g₂,t) * I
-    to_return += (get_B(n,m,g₂,t)' * get_A(n,m,g₂,t)^(-1) * get_dev_B(n,m,g₂,t) + get_dev_B(n,m,g₂,t)' * get_A(n,m,g₂,t)^(-1) * get_B(n,m,g₂,t) - get_B(n,m,g₂,t)' * get_dev_A(n,m,g₂,t)^(-1) * get_B(n,m,g₂,t)) * I
-    to_return *= 1/(π^3 * π * N_th)*sqrt((2*π)^8)
+    println("Contribution from dev_ψ: ", to_return)
+    cont_1 = -(dev_μ(n,g₂)/μ(n,g₂) + dev_μ(m,g₂)/μ(m,g₂)) * I
+    to_return += cont_1
+    println("Contribution from dev_μ: ", cont_1)
+    cont_2 =  -1/2 * tr(get_A(n,m,g₂,t)^(-1)*get_dev_A(n,m,g₂,t)) * I
+    to_return += cont_2
+    println("Contribution from dev_A: ", cont_2)
+    cont_3 = dev_C(n,m,g₂,t) * I
+    to_return += cont_3
+    println("Contribution from dev_C: ", cont_3)
+    cont_4 = 1/2*(get_B(n,m,g₂,t)' * get_A(n,m,g₂,t)^(-1) * get_dev_B(n,m,g₂,t) + get_dev_B(n,m,g₂,t)' * get_A(n,m,g₂,t)^(-1) * get_B(n,m,g₂,t) - get_B(n,m,g₂,t)' * get_A(n,m,g₂,t)^(-1) * get_dev_A(n,m,g₂,t)*get_A(n,m,g₂,t)^(-1) * get_B(n,m,g₂,t)) * I
+    to_return += cont_4
+    println("Contribution from dev_B: ", cont_4) 
     return to_return
 end
 
 
-function plot_evolution(g₂)
+function plot_evolution()
     t_track = 0.0:0.01:10.0
+    g_track = 1e-5:1e-5:1e-3
+    diag_g = [int_total(3,3,g,0.) for g in g_track]
     ev_11 = [int_total(1,1,g₂,t) for t in t_track]
     ev_22 = [int_total(10,10,g₂,t) for t in t_track]
     ev_33 = [int_total(100,100,g₂,t) for t in t_track]
@@ -250,10 +260,16 @@ function plot_evolution(g₂)
     ev_13 = [int_total(1,3,g₂,t) for t in t_track]
     ev_23 = [int_total(2,3,g₂,t) for t in t_track]
     plt = plot(legend = :outertopleft)
-    title!("Integral evolution, g=1e-10")
-    xlabel!("Time")
-    ylabel!("Integral value")	
-    result10 =  [int_total(10,10,g₂,t) for t in t_track]
-    plot!(t_track, round.([real.(ev_11) real.(ev_22) real.(ev_33)],digits=10), label=["1" "10" "100"], xlabel="Time", ylabel="Real part of the integral")
+
+    title!("Matrix element versus g")
+    xlabel!("g")
+    ylabel!("Matrix element value")
+    plot!(g_track, round.(real.(diag_g),digits=10))
+    #--- Uncomment the following lines to plot the evolution of the integral value over time
+    # title!("Integral evolution, g=1e-10")
+    # xlabel!("Time")
+    # ylabel!("Integral value")	
+    # plot!(t_track, round.([real.(ev_11) real.(ev_22) real.(ev_33)],digits=10), label=["1" "10" "100"], xlabel="Time", ylabel="Real part of the integral")
     display(plt)
 end
+# plot_evolution()

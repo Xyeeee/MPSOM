@@ -26,9 +26,9 @@ dev_ψ(n,g₂,t) = dev_ω(n,g₂) * t - 2 * (dev_g(n,g₂) * g(n,g₂)/Ω(n,g₂
 β(n,g₂,t) = g(n,g₂) / Ω(n,g₂) * (exp(-im * Ω(n,g₂) * t) - 1)
 dev_β(n,g₂,t) = (dev_g(n,g₂)/Ω(n,g₂) -g(n,g₂)/Ω(n,g₂)^2 * dev_Ω(n,g₂))  * (exp(-im * Ω(n,g₂) * t) - 1) -im * t * dev_Ω(n,g₂)* g(n,g₂) / Ω(n,g₂) * exp(-im * Ω(n,g₂) * t) 
 μ(n,g₂) = 1/2 * sqrt(Ω(n,g₂)/Ω₀) * (1 + Ω₀/Ω(n,g₂))
-dev_μ(n,g₂) = 1/2 * (1/2 * μ(n,g₂)/Ω(n,g₂)* dev_Ω(n,g₂) - sqrt(Ω(n,g₂)/Ω₀) * Ω₀/Ω(n,g₂)^2 * dev_Ω(n,g₂))
+dev_μ(n,g₂) = 1/2 * (μ(n,g₂)/Ω(n,g₂)* dev_Ω(n,g₂) - sqrt(Ω(n,g₂)/Ω₀) * Ω₀/Ω(n,g₂)^2 * dev_Ω(n,g₂))
 ν(n,g₂) = 1/2 * sqrt(Ω(n,g₂)/Ω₀) * (1 - Ω₀/Ω(n,g₂))
-dev_ν(n,g₂) = 1/2 * (1/2 *ν(n,g₂)/Ω(n,g₂)* dev_Ω(n,g₂) + sqrt(Ω(n,g₂)/Ω₀) * Ω₀/Ω(n,g₂)^2 * dev_Ω(n,g₂))
+dev_ν(n,g₂) = 1/2 * (ν(n,g₂)/Ω(n,g₂)* dev_Ω(n,g₂) + sqrt(Ω(n,g₂)/Ω₀) * Ω₀/Ω(n,g₂)^2 * dev_Ω(n,g₂))
 # Integral matrix definitions
 # 1. η real 2. η imag 3. γ real 4. γ imag 5. ϵ real 6. ϵ imag 7. δ real 8. δ imag
 function get_A(n,m,g₂,t)
@@ -223,11 +223,11 @@ function get_dev_B(n,m,g₂,t)
                 + (dev_β(m,g₂,t) + β(m,g₂,t) * im* t* dev_Ω(m,g₂))* exp(im* Ω(m,g₂)* t)
     dev_B[8] = 2 * (real(dev_β(m,g₂,t)) * sin(Ω(m,g₂) * t) + real(β(m,g₂,t)) * cos(Ω(m,g₂) * t) * dev_Ω(m,g₂) * t  + imag(dev_β(m,g₂,t)) * cos(Ω(m,g₂) * t) - imag(β(m,g₂,t)) * sin(Ω(m,g₂) * t) * t * dev_Ω(m,g₂) + im * (conj(dev_β(m,g₂,t)) *  ν(m,g₂)/μ(m,g₂) + conj(β(m,g₂,t)) *  (dev_ν(m,g₂)/μ(m,g₂) - ν(m,g₂)/μ(m,g₂)^2 * dev_μ(m,g₂)) + conj(β(m,g₂,t)) * ν(m,g₂)/μ(m,g₂) * im * dev_Ω(m,g₂) * t) *  exp(im * Ω(m,g₂) * t))
                 - (im* conj(dev_β(m,g₂,t)) + conj(β(m,g₂,t)) * t* dev_Ω(m,g₂))* exp(-im* Ω(m,g₂)* t)
-                +(-im* dev_β(m,g₂,t) + β(m,g₂,t) * t* dev_Ω(n,g₂))* exp(im* Ω(n,g₂)* t)
-    return dev_B
+                +(-im* dev_β(m,g₂,t) + β(m,g₂,t) * t* dev_Ω(m,g₂))* exp(im* Ω(n,g₂)* t)
+    return -1/2 * dev_B
 end
 
-dev_C(n,m,g₂,t) = -(real(dev_β(n,g₂,t))*real(β(n,g₂,t)) + imag(dev_β(n,g₂,t)) * imag(β(n,g₂,t)) + real(dev_β(m,g₂,t))*real(β(m,g₂,t)) + imag(dev_β(m,g₂,t)) * imag(β(m,g₂,t))) +1/2* ((dev_ν(m,g₂)/μ(m,g₂) - ν(m,g₂)/μ(m,g₂)^2 * dev_μ(m,g₂)) * conj(β(m,g₂,t)^2) - ν(m,g₂)/μ(m,g₂) * 2* conj(β(m,g₂,t))* conj(dev_β(m,g₂,t)) + (dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂)) * β(n,g₂,t)^2 + ν(n,g₂)/μ(n,g₂) * (2 * dev_β(n,g₂,t)*β(n,g₂,t)))
+dev_C(n,m,g₂,t) = -(real(dev_β(n,g₂,t))*real(β(n,g₂,t)) + imag(dev_β(n,g₂,t)) * imag(β(n,g₂,t)) + real(dev_β(m,g₂,t))*real(β(m,g₂,t)) + imag(dev_β(m,g₂,t)) * imag(β(m,g₂,t))) +1/2* ((dev_ν(m,g₂)/μ(m,g₂) - ν(m,g₂)/μ(m,g₂)^2 * dev_μ(m,g₂)) * conj(β(m,g₂,t)^2) + ν(m,g₂)/μ(m,g₂) * 2* conj(β(m,g₂,t))* conj(dev_β(m,g₂,t)) + (dev_ν(n,g₂)/μ(n,g₂) - ν(n,g₂)/μ(n,g₂)^2 * dev_μ(n,g₂)) * β(n,g₂,t)^2 + ν(n,g₂)/μ(n,g₂) * (2 * dev_β(n,g₂,t)*β(n,g₂,t)))
 
 function dev_int_total(n,m,g₂,t)
     I = int_total(n,m,g₂,t)

@@ -305,7 +305,41 @@ function get_dev_mat(a, b, g₂, t)
     return dev_ρ
 end  
 
-comm(a,b,g₂, t) = -get_dev_mat(a, b, g₂, t) * get_mat(a,b,g₂, t) .+ get_mat(a,b,g₂, t) * get_dev_mat(a,b,g₂, t)
-comm(0.5,0.5,1e-2,1.) ./ get_dev_mat(0.5,0.5,1e-2,1.)
-println(diff)
 
+function QFI_Zhong(a,b,g₂,t)
+    # This function calculates the QFI for a given density matrix ρ according to Zhong et.al.
+    ρ = get_mat(a,b,g₂,t)
+    dev_ρ = get_dev_mat(a,b,g₂,t)
+    α_coef = ((4 * (1-2 * det(ρ)))/(1+2*sqrt(det(ρ)))-1)/(1-4 * det(ρ))
+    β_coef = (8/(1+2 * sqrt(det(ρ)))-1/det(ρ))/(1-4 * det(ρ))
+    QFI = α_coef * tr(dev_ρ)^2 - β_coef * tr(ρ * dev_ρ)^2
+    return QFI
+end
+
+function QFI_Liu(a,b,g₂,t)
+    # This function calculates the QFI for a given density matrix ρ according to Liu et.al.
+    ρ = get_mat(a,b,g₂,t)
+    dev_ρ = get_dev_mat(a,b,g₂,t)
+    alpha = 1
+    beta = ρ[1,1] - ρ[1,1]^2 - abs(ρ[1,2])^2
+    # P denotes the purity of the state
+    P = alpha - beta
+    Q = 2 *tr(dev_ρ)^2 + (dev_ρ[1,1] - 2 * ρ[1,1] * dev_ρ[1,1] - 2 * real(ρ[1,2]) * real(dev_ρ[1,2] - 2 * imag(ρ[1,2])*imag(dev_ρ[1,2])))^2 * tr(ρ)^(-1)
+    return Q
+end
+
+
+function print_QFI(a,b,g₂,t)
+    t_track = 0.0:0.01:10.0
+    QFI_Zhong_track = [QFI_Zhong(a,b,g₂,t) for t in t_track]
+    QFI_Liu_track = [QFI_Liu(a,b,g₂,t) for t in t_track]
+    plt = plot(legend = :outertopleft)
+    title!("QFI evolution")
+    xlabel!("Time")
+    ylabel!("QFI value")
+    # plot!(t_track, real.(QFI_Zhong_track), label="QFI Zhong", xlabel="Time", ylabel="QFI value")
+    plot!(t_track, real.(QFI_Liu_track), label="QFI Liu", xlabel="Time", ylabel="QFI value")
+    display(plt)
+end
+
+print_QFI(0.5,0.5,1e-2,10.0)

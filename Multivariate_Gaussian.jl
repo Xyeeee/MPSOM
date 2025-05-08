@@ -1,6 +1,7 @@
 using LinearAlgebra
 using Plots
 using ForwardDiff
+using QuadGK
 
 
 # Parameters involved in the model
@@ -305,16 +306,51 @@ function get_dev_mat(a, b, g₂, t)
     return dev_ρ
 end  
 
+function get_mat_general(ρ₀,g₂,t)
+    # This function constructs the time dependent density matrix, a is a_00 and b is a_01
+    ρ= zeros(Complex{Float64}, size(ρ₀)[1], size(ρ₀)[2])
+    for i in 1:size(ρ₀,1)
+        for j in 1:size(ρ₀,2)
+            ρ[i,j] = int_total(i-1,j-1,g₂,t)*ρ₀[i,j]
+        end
+    end
+    return ρ
+end
 
-function QFI_Zhong(a,b,g₂,t)
-    # This function calculates the QFI for a given density matrix ρ according to Zhong et.al.
-    ρ = get_mat(a,b,g₂,t)
-    dev_ρ = get_dev_mat(a,b,g₂,t)
-    α_coef = ((4 * (1-2 * det(ρ)))/(1+2*sqrt(det(ρ)))-1)/(1-4 * det(ρ))
-    β_coef = (8/(1+2 * sqrt(det(ρ)))-1/det(ρ))/(1-4 * det(ρ))
-    QFI = α_coef * tr(dev_ρ)^2 - β_coef * tr(ρ * dev_ρ)^2
+function get_dev_mat_general(ρ₀,g₂,t)
+    # This function constructs the time dependent density matrix, a is a_00 and b is a_01
+    dev_ρ= zeros(Complex{Float64}, size(ρ₀)[1], size(ρ₀)[2])
+    for i in 1:size(ρ₀,1)
+        for j in 1:size(ρ₀,2)
+            dev_ρ[i,j] = dev_int_total(i-1,j-1,g₂,t)*ρ₀[i,j]
+        end
+    end
+    return dev_ρ
+end
+function get_L(ρ₀,g₂,t)
+    # This function calculates the SLD
+    dev_ρ = get_dev_mat_general(ρ₀,g₂,t)
+    ρ = get_mat_general(ρ₀,g₂,t)
+    L = quadgk(x -> exp(-x* ρ) * dev_ρ * exp(-x* ρ),  0, Inf)[1]
+    return 2 * L
+end
+
+function QFI_general(ρ,g₂,t)
+    # This function calculates the QFI for a given density matrix ρ according to the general formula
+    L = get_L(ρ,g₂,t)
+    QFI = tr(ρ* L^2)
     return QFI
 end
+
+# function QFI_Zhong(a,b,g₂,t)
+#     # This function calculates the QFI for a given density matrix ρ according to Zhong et.al.
+#     ρ = get_mat(a,b,g₂,t)
+#     dev_ρ = get_dev_mat(a,b,g₂,t)
+#     α_coef = ((4 * (1-2 * det(ρ)))/(1+2*sqrt(det(ρ)))-1)/(1-4 * det(ρ))
+#     β_coef = (8/(1+2 * sqrt(det(ρ)))-1/det(ρ))/(1-4 * det(ρ))
+#     QFI = α_coef * tr(dev_ρ)^2 - β_coef * tr(ρ * dev_ρ)^2
+#     return QFI
+# end
 
 function QFI_Liu(a,b,g₂,t)
     # This function calculates the QFI for a given density matrix ρ according to Liu et.al.
@@ -324,22 +360,68 @@ function QFI_Liu(a,b,g₂,t)
     beta = ρ[1,1] - ρ[1,1]^2 - abs(ρ[1,2])^2
     # P denotes the purity of the state
     P = alpha - beta
-    Q = 2 *tr(dev_ρ)^2 + (dev_ρ[1,1] - 2 * ρ[1,1] * dev_ρ[1,1] - 2 * real(ρ[1,2]) * real(dev_ρ[1,2] - 2 * imag(ρ[1,2])*imag(dev_ρ[1,2])))^2 * tr(ρ)^(-1)
+    # Q = 2 *tr(dev_ρ)^2 + (dev_ρ[1,1] - 2 * ρ[1,1] * dev_ρ[1,1] - 2 * real(ρ[1,2]) * real(dev_ρ[1,2] - 2 * imag(ρ[1,2])*imag(dev_ρ[1,2])))^2 * tr(ρ)^(-1)
+    L = 2 * dev_ρ + (dev_ρ[1,1] - 2 * ρ[1,1] * dev_ρ[1,1] - 2 * real(ρ[1,2]) * real(dev_ρ[1,2] - 2 * imag(ρ[1,2])*imag(dev_ρ[1,2])))* inv(ρ)
+    Q = tr(ρ * L^2) 
     return Q
 end
 
 
-function print_QFI(a,b,g₂,t)
-    t_track = 0.0:0.01:10.0
-    QFI_Zhong_track = [QFI_Zhong(a,b,g₂,t) for t in t_track]
+function print_QFI_2_levels(a,b,g₂,t)
+    t_track = 0.0:0.1:100.0
     QFI_Liu_track = [QFI_Liu(a,b,g₂,t) for t in t_track]
+    ρ₀ = get_mat(a,b,g₂,0)
+    QFI_general_track = [QFI_general(ρ₀,g₂,t) for t in t_track]
     plt = plot(legend = :outertopleft)
     title!("QFI evolution")
     xlabel!("Time")
     ylabel!("QFI value")
-    # plot!(t_track, real.(QFI_Zhong_track), label="QFI Zhong", xlabel="Time", ylabel="QFI value")
+    plot!(t_track, real.(QFI_general_track), label="QFI General", xlabel="Time", ylabel="QFI value")
     plot!(t_track, real.(QFI_Liu_track), label="QFI Liu", xlabel="Time", ylabel="QFI value")
     display(plt)
 end
 
-print_QFI(0.5,0.5,1e-2,10.0)
+function plot_eigen_2(a,b,g₂,t)
+    t_track = 0.0:0.1:100.0
+    eigenvalues_1 = [eigvals(get_dev_mat(a,b,g₂,t))[1] for t in t_track]
+    eigenvalues_2 = [eigvals(get_dev_mat(a,b,g₂,t))[2] for t in t_track]
+    plt = plot(legend = :outertopleft)
+    title!("eval evolution")
+    xlabel!("Time")
+    ylabel!("QFI value")
+    plot!(t_track, real.(eigenvalues_1), label="1st eval")
+    plot!(t_track, real.(eigenvalues_2), label="2nd eval")
+    display(plt)
+end
+
+function plot_general_QFI(ρ₀)
+    t = 6.25
+    g_track = 1e-5:1e-5:1e-2
+    # QFI_general_track_1 = [QFI_general(ρ₀,g_track[1],t) for t in t_track]
+    # QFI_general_track_2 = [QFI_general(ρ₀,g_track[2],t) for t in t_track]
+    # QFI_general_track_3 = [QFI_general(ρ₀,g_track[3],t) for t in t_track]
+    # QFI_general_track_4 = [QFI_general(ρ₀,g_track[4],t) for t in t_track]
+    # QFI_general_track_5 = [QFI_general(ρ₀,g_track[5],t) for t in t_track]
+    track = [QFI_general(ρ₀,g,t) for g in g_track]
+    plt = plot(legend = :outertopleft)
+    title!("QFI evolution")
+    xlabel!("Time")
+    ylabel!("QFI value")
+    # plot!(t_track, real.(QFI_general_track_1), label="QFI 1e-1", xlabel="Time", ylabel="QFI value")
+    # plot!(t_track, real.(QFI_general_track_2), label="QFI 1e-2", xlabel="Time", ylabel="QFI value")
+    # plot!(t_track, real.(QFI_general_track_3), label="QFI 1e-3", xlabel="Time", ylabel="QFI value")
+    # plot!(t_track, real.(QFI_general_track_4), label="QFI 1e-4", xlabel="Time", ylabel="QFI value")
+    # plot!(t_track, real.(QFI_general_track_5), label="QFI 1e-5", xlabel="Time", ylabel="QFI value")
+    plot!(g_track, real.(track), label="QFI General", xlabel="g", ylabel="QFI value")
+    display(plt)
+end
+# print_QFI_2_levels(0.5,0.3,1e-2,10.0)
+plot_eigen_2(0.5,0.3,1e-2,10.0)
+
+ρ₀ = ones(7,7) * 1/7
+ρ₀[1,2] = 0.5
+ρ₀[2,1] = 0.5
+# plot_general_QFI(ρ₀)
+# QFI_general(ρ₀,1e-2,10.0)
+
+

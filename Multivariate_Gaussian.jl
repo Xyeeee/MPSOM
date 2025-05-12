@@ -1,5 +1,4 @@
 using LinearAlgebra
-using Plots
 using ForwardDiff
 using QuadGK
 
@@ -7,10 +6,10 @@ using QuadGK
 # Parameters involved in the model
 
 mass = 1.0
-Ω₀ = 1.0
+Ω₀ = 1.
 σ = 1.0
 ω₀ = 1.0
-g₁ = 1.0
+g₁ = 0.0
 g₂ = 1e-2
 N_th = 1.0
 
@@ -257,35 +256,6 @@ function dev_int_total(n,m,g₂,t)
 end
 
 
-function plot_evolution()
-    t_track = 0.0:0.01:10.0
-    g_track = 1e-5:1e-5:1e-3
-    diag_g = [int_total(3,3,g,1.) for g in g_track]
-    diag_dev = [dev_int_total(10,10,g,10.) for g in g_track]
-    dev_track = [dev_int_total(3,3,1e-2,t) for t in t_track]
-    ev_11 = [int_total(1,1,g₂,t) for t in t_track]
-    ev_22 = [int_total(10,10,g₂,t) for t in t_track]
-    ev_33 = [int_total(100,100,g₂,t) for t in t_track]
-    ev_12 = [int_total(1,2,g₂,t) for t in t_track]
-    ev_13 = [int_total(1,3,g₂,t) for t in t_track]
-    ev_23 = [int_total(2,3,g₂,t) for t in t_track]
-    plt = plot(legend = :outertopleft)
-
-    title!("Matrix element versus g")
-    xlabel!("g")
-    ylabel!("Matrix element value")
-    plot!(g_track, round.(real.(diag_g),digits=10))
-    plot!(g_track, round.(real.(diag_dev),digits=10))
-    #--- Uncomment the following lines to plot the evolution of the integral value over time
-    # title!("Integral evolution, g=1e-10")
-    # xlabel!("Time")
-    # ylabel!("Integral value")	
-    # plot!(t_track, real.(dev_track), label="dev", xlabel="Time", ylabel="Real part of the integral")
-    # plot!(t_track, round.([real.(ev_11) real.(ev_22) real.(ev_33)],digits=10), label=["1" "10" "100"], xlabel="Time", ylabel="Real part of the integral")
-    display(plt)
-end
-# plot_evolution()
-
 function get_mat(a, b, g₂, t)
     # This function constructs the time dependent density matrix, a is a_00 and b is a_01
     ρ= zeros(Complex{Float64}, 2, 2)
@@ -293,6 +263,7 @@ function get_mat(a, b, g₂, t)
     ρ[2,2] = (1-a) * int_total(1,1,g₂,t)
     ρ[1,2] = b * int_total(0,1,g₂,t)
     ρ[2,1] = conj(b) * int_total(1,0,g₂,t)
+    @assert abs(tr(ρ) - 1.0) <  1e-5 "Trace of the density matrix is not 1"
     return ρ
 end
 
@@ -367,61 +338,5 @@ function QFI_Liu(a,b,g₂,t)
 end
 
 
-function print_QFI_2_levels(a,b,g₂,t)
-    t_track = 0.0:0.1:100.0
-    QFI_Liu_track = [QFI_Liu(a,b,g₂,t) for t in t_track]
-    ρ₀ = get_mat(a,b,g₂,0)
-    QFI_general_track = [QFI_general(ρ₀,g₂,t) for t in t_track]
-    plt = plot(legend = :outertopleft)
-    title!("QFI evolution")
-    xlabel!("Time")
-    ylabel!("QFI value")
-    plot!(t_track, real.(QFI_general_track), label="QFI General", xlabel="Time", ylabel="QFI value")
-    plot!(t_track, real.(QFI_Liu_track), label="QFI Liu", xlabel="Time", ylabel="QFI value")
-    display(plt)
-end
-
-function plot_eigen_2(a,b,g₂,t)
-    t_track = 0.0:0.1:100.0
-    eigenvalues_1 = [eigvals(get_dev_mat(a,b,g₂,t))[1] for t in t_track]
-    eigenvalues_2 = [eigvals(get_dev_mat(a,b,g₂,t))[2] for t in t_track]
-    plt = plot(legend = :outertopleft)
-    title!("eval evolution")
-    xlabel!("Time")
-    ylabel!("QFI value")
-    plot!(t_track, real.(eigenvalues_1), label="1st eval")
-    plot!(t_track, real.(eigenvalues_2), label="2nd eval")
-    display(plt)
-end
-
-function plot_general_QFI(ρ₀)
-    t = 6.25
-    g_track = 1e-5:1e-5:1e-2
-    # QFI_general_track_1 = [QFI_general(ρ₀,g_track[1],t) for t in t_track]
-    # QFI_general_track_2 = [QFI_general(ρ₀,g_track[2],t) for t in t_track]
-    # QFI_general_track_3 = [QFI_general(ρ₀,g_track[3],t) for t in t_track]
-    # QFI_general_track_4 = [QFI_general(ρ₀,g_track[4],t) for t in t_track]
-    # QFI_general_track_5 = [QFI_general(ρ₀,g_track[5],t) for t in t_track]
-    track = [QFI_general(ρ₀,g,t) for g in g_track]
-    plt = plot(legend = :outertopleft)
-    title!("QFI evolution")
-    xlabel!("Time")
-    ylabel!("QFI value")
-    # plot!(t_track, real.(QFI_general_track_1), label="QFI 1e-1", xlabel="Time", ylabel="QFI value")
-    # plot!(t_track, real.(QFI_general_track_2), label="QFI 1e-2", xlabel="Time", ylabel="QFI value")
-    # plot!(t_track, real.(QFI_general_track_3), label="QFI 1e-3", xlabel="Time", ylabel="QFI value")
-    # plot!(t_track, real.(QFI_general_track_4), label="QFI 1e-4", xlabel="Time", ylabel="QFI value")
-    # plot!(t_track, real.(QFI_general_track_5), label="QFI 1e-5", xlabel="Time", ylabel="QFI value")
-    plot!(g_track, real.(track), label="QFI General", xlabel="g", ylabel="QFI value")
-    display(plt)
-end
-# print_QFI_2_levels(0.5,0.3,1e-2,10.0)
-plot_eigen_2(0.5,0.3,1e-2,10.0)
-
-ρ₀ = ones(7,7) * 1/7
-ρ₀[1,2] = 0.5
-ρ₀[2,1] = 0.5
-# plot_general_QFI(ρ₀)
-# QFI_general(ρ₀,1e-2,10.0)
 
 

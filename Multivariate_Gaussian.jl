@@ -1,23 +1,22 @@
 using LinearAlgebra
 using ForwardDiff
 using QuadGK
+include("Utils.jl")	
 
-
-# Parameters involved in the model
-
-mass = 1.0
-Ω₀ = 1.
-σ = 1.0
-ω₀ = 1.0
-g₁ = 0.0
-g₂ = 1e-2
-N_th = 1.0
-
-Ω(n,g₂) = sqrt(Ω₀^2 + 2 * g₂*n/mass)
-dev_Ω(n,g₂) = 1/2 * 2 * n/(mass *Ω(n,g₂))
+unit_free = true
+if unit_free
+    include("Unit_free.jl")
+    Ω(n,g₂) = sqrt(Ω₀^2 + 2 *g₂*n/mass) 
+    dev_Ω(n,g₂) = n/(mass *Ω(n,g₂))
+else
+    include("Params.jl")
+    Ω(n,g₂) = sqrt(Ω₀^2 + 2 * h_bar* g₂*n/mass) 
+    println("Period: ", 2 * pi / (Ω(1,g₂)-Ω(0,g₂)))
+    dev_Ω(n,g₂) = n * h_bar /(mass *Ω(n,g₂))
+end
 g(n,g₂) = n * g₁/sqrt(2 * mass * Ω(n,g₂))
 dev_g(n,g₂) = -1/2 * g(n,g₂)/Ω(n,g₂) * dev_Ω(n,g₂)
-ω(n,g₂) = ω₀ * n + Ω(n,g₂)/2
+ω(n,g₂) = ω₀ * n + Ω(n,g₂)/2 
 dev_ω(n,g₂) = 1/2 * dev_Ω(n,g₂)
 
 ψ(n,g₂,t) = ω(n,g₂) * t - g(n,g₂)^2/Ω(n,g₂)^2 * (Ω(n,g₂) * t - sin(Ω(n,g₂) * t))
@@ -30,7 +29,7 @@ dev_μ(n,g₂) = 1/2 * (μ(n,g₂)/Ω(n,g₂)* dev_Ω(n,g₂) - sqrt(Ω(n,g₂)/
 dev_ν(n,g₂) = 1/2 * (ν(n,g₂)/Ω(n,g₂)* dev_Ω(n,g₂) + sqrt(Ω(n,g₂)/Ω₀) * Ω₀/Ω(n,g₂)^2 * dev_Ω(n,g₂))
 # Integral matrix definitions
 # 1. η real 2. η imag 3. γ real 4. γ imag 5. ϵ real 6. ϵ imag 7. δ real 8. δ imag
-function get_A(n,m,g₂,t)
+function get_A(n,m,g₂,t,N_th)
     A = zeros(Complex{Float64}, 8, 8)
     A[1,1] = 2 + 2/(N_th) + ν(n,g₂)/μ(n,g₂) + ν(m,g₂)/μ(m,g₂)
     A[1,2] = im * (ν(n,g₂)/μ(n,g₂) - ν(m,g₂)/μ(m,g₂))
@@ -127,7 +126,7 @@ end
 C(n,m,g₂,t) = -1/2 * (abs(β(n,g₂,t))^2 + abs(β(m,g₂,t))^2 - ν(m,g₂)/μ(m,g₂) * conj(β(m,g₂,t)^2) - ν(n,g₂)/μ(n,g₂) * β(n,g₂,t)^2) 
 
 
-int_total(n,m,g₂,t) = 1/(π^3 * π * N_th)*exp(-im * (ψ(n,g₂,t)-ψ(m,g₂,t)))/(μ(n,g₂) * μ(m,g₂)) * sqrt((2*π)^8/det(get_A(n,m,g₂,t))) * exp(C(n,m,g₂,t)) * exp(1/2* transpose(get_B(n,m,g₂,t)) * get_A(n,m,g₂,t)^-1 * get_B(n,m,g₂,t))
+int_total(n,m,g₂,t,N_th) = 1/(π^3 * π * N_th)*exp(-im * (ψ(n,g₂,t)-ψ(m,g₂,t)))/(μ(n,g₂) * μ(m,g₂)) * sqrt((2*π)^8/det(get_A(n,m,g₂,t,N_th))) * exp(C(n,m,g₂,t)) * exp(1/2* transpose(get_B(n,m,g₂,t)) * get_A(n,m,g₂,t,N_th)^-1 * get_B(n,m,g₂,t))
 
 function get_dev_A(n,m,g₂,t)
     dev_A = zeros(Complex{Float64}, 8, 8)
@@ -237,106 +236,105 @@ dev_C(n,m,g₂,t) = -(
     ν(n,g₂)/μ(n,g₂) * (2 * dev_β(n,g₂,t) * β(n,g₂,t))
 )
 
-function dev_int_total(n,m,g₂,t)
-    I = int_total(n,m,g₂,t)
+function dev_int_total(n,m,g₂,t,N_th)
+    I = int_total(n,m,g₂,t,N_th)
     to_return = -im * (dev_ψ(n,g₂,t)-dev_ψ(m,g₂,t))
     cont_1 = -(dev_μ(n,g₂)/μ(n,g₂) + dev_μ(m,g₂)/μ(m,g₂))
     to_return += cont_1
-    cont_2 =  -1/2 * tr(get_A(n,m,g₂,t)^(-1)*get_dev_A(n,m,g₂,t))
+    cont_2 =  -1/2 * tr(get_A(n,m,g₂,t,N_th)^(-1)*get_dev_A(n,m,g₂,t))
     to_return += cont_2
     cont_3 = dev_C(n,m,g₂,t)
     to_return += cont_3
     cont_4 = 1/2*(
-        transpose(get_B(n,m,g₂,t)) * get_A(n,m,g₂,t)^(-1) * get_dev_B(n,m,g₂,t) + 
-        transpose(get_dev_B(n,m,g₂,t)) * get_A(n,m,g₂,t)^(-1) * get_B(n,m,g₂,t) - 
-        transpose(get_B(n,m,g₂,t)) * (get_A(n,m,g₂,t)^(-1) * get_dev_A(n,m,g₂,t) * get_A(n,m,g₂,t)^(-1)) * get_B(n,m,g₂,t)
+        transpose(get_B(n,m,g₂,t)) * get_A(n,m,g₂,t,N_th)^(-1) * get_dev_B(n,m,g₂,t) + 
+        transpose(get_dev_B(n,m,g₂,t)) * get_A(n,m,g₂,t,N_th)^(-1) * get_B(n,m,g₂,t) - 
+        transpose(get_B(n,m,g₂,t)) * (get_A(n,m,g₂,t,N_th)^(-1) * get_dev_A(n,m,g₂,t) * get_A(n,m,g₂,t,N_th)^(-1)) * get_B(n,m,g₂,t)
     )
     to_return += cont_4
     return to_return * I
 end
 
 
-function get_mat(a, b, g₂, t)
+function get_mat(a, b, g₂, t,N_th)
     # This function constructs the time dependent density matrix, a is a_00 and b is a_01
     ρ= zeros(Complex{Float64}, 2, 2)
-    ρ[1,1] = a * int_total(0,0,g₂,t)
-    ρ[2,2] = (1-a) * int_total(1,1,g₂,t)
-    ρ[1,2] = b * int_total(0,1,g₂,t)
-    ρ[2,1] = conj(b) * int_total(1,0,g₂,t)
-    @assert abs(tr(ρ) - 1.0) <  1e-5 "Trace of the density matrix is not 1"
+    ρ[1,1] = a * int_total(0,0,g₂,t,N_th)
+    ρ[2,2] = (1-a) * int_total(1,1,g₂,t,N_th)
+    ρ[1,2] = b * int_total(0,1,g₂,t,N_th)
+    ρ[2,1] = conj(b) * int_total(1,0,g₂,t,N_th)
+    # @assert abs(tr(ρ) - 1.0) <  1e-5 "Trace of the density matrix is not 1"
     return ρ
 end
 
-function get_dev_mat(a, b, g₂, t)
+function get_dev_mat(a, b, g₂, t,N_th)
     # This function constructs the time dependent density matrix, a is a_00 and b is a_01
     dev_ρ= zeros(Complex{Float64}, 2, 2)
-    dev_ρ[1,1] = a * dev_int_total(0,0,g₂,t)
-    dev_ρ[2,2] = (1-a) * dev_int_total(1,1,g₂,t)
-    dev_ρ[1,2] = b * dev_int_total(0,1,g₂,t)
-    dev_ρ[2,1] = conj(b) * dev_int_total(1,0,g₂,t)
+    dev_ρ[1,1] = a * dev_int_total(0,0,g₂,t,N_th)
+    dev_ρ[2,2] = (1-a) * dev_int_total(1,1,g₂,t,N_th)
+    dev_ρ[1,2] = b * dev_int_total(0,1,g₂,t,N_th)
+    dev_ρ[2,1] = conj(b) * dev_int_total(1,0,g₂,t,N_th)
     return dev_ρ
 end  
 
-function get_mat_general(ρ₀,g₂,t)
+function get_mat_general(ρ₀,g₂,t,N_th)
     # This function constructs the time dependent density matrix, a is a_00 and b is a_01
     ρ= zeros(Complex{Float64}, size(ρ₀)[1], size(ρ₀)[2])
     for i in 1:size(ρ₀,1)
         for j in 1:size(ρ₀,2)
-            ρ[i,j] = int_total(i-1,j-1,g₂,t)*ρ₀[i,j]
+            ρ[i,j] = int_total(i-1,j-1,g₂,t,N_th)*ρ₀[i,j]
         end
     end
     return ρ
 end
 
-function get_dev_mat_general(ρ₀,g₂,t)
+function get_dev_mat_general(ρ₀,g₂,t,N_th)
     # This function constructs the time dependent density matrix, a is a_00 and b is a_01
     dev_ρ= zeros(Complex{Float64}, size(ρ₀)[1], size(ρ₀)[2])
     for i in 1:size(ρ₀,1)
         for j in 1:size(ρ₀,2)
-            dev_ρ[i,j] = dev_int_total(i-1,j-1,g₂,t)*ρ₀[i,j]
+            dev_ρ[i,j] = dev_int_total(i-1,j-1,g₂,t,N_th)*ρ₀[i,j]
         end
     end
     return dev_ρ
 end
-function get_L(ρ₀,g₂,t)
+function get_L(ρ₀,g₂,t,N_th)
     # This function calculates the SLD
-    dev_ρ = get_dev_mat_general(ρ₀,g₂,t)
-    ρ = get_mat_general(ρ₀,g₂,t)
+    dev_ρ = get_dev_mat_general(ρ₀,g₂,t,N_th)
+    ρ = get_mat_general(ρ₀,g₂,t,N_th)
     L = quadgk(x -> exp(-x* ρ) * dev_ρ * exp(-x* ρ),  0, Inf)[1]
     return 2 * L
 end
 
-function QFI_general(ρ,g₂,t)
+function QFI_general(ρ,g₂,t,N_th)
     # This function calculates the QFI for a given density matrix ρ according to the general formula
-    L = get_L(ρ,g₂,t)
+    L = get_L(ρ,g₂,t,N_th)
     QFI = tr(ρ* L^2)
     return QFI
 end
 
-# function QFI_Zhong(a,b,g₂,t)
-#     # This function calculates the QFI for a given density matrix ρ according to Zhong et.al.
-#     ρ = get_mat(a,b,g₂,t)
-#     dev_ρ = get_dev_mat(a,b,g₂,t)
-#     α_coef = ((4 * (1-2 * det(ρ)))/(1+2*sqrt(det(ρ)))-1)/(1-4 * det(ρ))
-#     β_coef = (8/(1+2 * sqrt(det(ρ)))-1/det(ρ))/(1-4 * det(ρ))
-#     QFI = α_coef * tr(dev_ρ)^2 - β_coef * tr(ρ * dev_ρ)^2
-#     return QFI
-# end
 
-function QFI_Liu(a,b,g₂,t)
+function QFI_Liu(a,b,g₂,t,N_th)
     # This function calculates the QFI for a given density matrix ρ according to Liu et.al.
-    ρ = get_mat(a,b,g₂,t)
-    dev_ρ = get_dev_mat(a,b,g₂,t)
-    alpha = 1
-    beta = ρ[1,1] - ρ[1,1]^2 - abs(ρ[1,2])^2
+    ρ = get_mat(a,b,g₂,t, N_th)
+    dev_ρ = get_dev_mat(a,b,g₂,t, N_th)
     # P denotes the purity of the state
-    P = alpha - beta
-    # Q = 2 *tr(dev_ρ)^2 + (dev_ρ[1,1] - 2 * ρ[1,1] * dev_ρ[1,1] - 2 * real(ρ[1,2]) * real(dev_ρ[1,2] - 2 * imag(ρ[1,2])*imag(dev_ρ[1,2])))^2 * tr(ρ)^(-1)
     L = 2 * dev_ρ + (dev_ρ[1,1] - 2 * ρ[1,1] * dev_ρ[1,1] - 2 * real(ρ[1,2]) * real(dev_ρ[1,2] - 2 * imag(ρ[1,2])*imag(dev_ρ[1,2])))* inv(ρ)
     Q = tr(ρ * L^2) 
     return Q
 end
 
+function CFI(a,b,g₂,t,ϕ,N_th)
+    # This function calculates the CFI for a given density matrix, with a set of POVM
+    ρ = get_mat(a,b,g₂,t, N_th)
+    dev_ρ = get_dev_mat(a,b,g₂,t,N_th)
+    P_0 = 1/2 + real(ρ[1,2] * exp(im * ϕ))
+    P_1 = 1/2 - real(ρ[1,2] * exp(im * ϕ))
+    dlog_P_0 = 1/P_0 * real(dev_ρ[1,2] * exp(im * ϕ))
+    dlog_P_1 = -1/P_1 * real(dev_ρ[1,2] * exp(im * ϕ))
+    C = P_0 * dlog_P_0^2 + P_1 * dlog_P_1^2
+    return C
+end
 
 
 
+S_F(f) = quadgk(t -> exp(-2 * im * pi * t * f) * real(int_total(1,0,g₂,t,N_th)), -Inf, Inf)[1]
